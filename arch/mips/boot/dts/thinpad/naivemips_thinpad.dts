@@ -7,7 +7,7 @@
 	#size-cells = <1>;
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8";
+		bootargs = "console=ttyS0,9600n8";
 	};
 
 	cpus {
@@ -28,7 +28,7 @@
 
 	memory {
 		device_type = "memory";
-		reg = <0x0 0x800000>;
+		reg = <0x0 0x8000000>;
 	};
 
 	cpuintc: interrupt-controller@0 {
@@ -51,7 +51,7 @@
 			reg = <0x1fd003F8 8>;
 			clock-frequency = <1843200>;
 			interrupt-parent = <&cpuintc>;
-			interrupts = <4>;
+			interrupts = <2>;
 		};
 
 	};
@@ -60,5 +60,5 @@
 };
 
 &ext {
-	clock-frequency = <8000000>;
+	clock-frequency = <25000000>;
 };
