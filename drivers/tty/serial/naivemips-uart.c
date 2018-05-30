@@ -250,7 +250,7 @@ static void naivemips_set_termios(struct uart_port *port, struct ktermios *termi
 {
     // struct naivemips_port *naivemips_port = to_naivemips_port(port);
     tcflag_t cflag = termios->c_cflag;
-    unsigned int baud = 115200;
+    unsigned int baud = 9600;
     unsigned long flags;
 
     cflag &= ~CRTSCTS;
@@ -355,7 +355,7 @@ static int naivemips_init_port(struct naivemips_port *naivemipsport,
         return PTR_ERR(port->membase);
     port->mapbase = res->start;
 
-    naivemipsport->port.uartclk = 1843200;
+    naivemipsport->port.uartclk = 9600 * 16;
     if (!naivemipsport->port.uartclk)
         ret = -EINVAL;
 
@@ -458,7 +458,7 @@ static void naivemips_console_write(struct console *co, const char *s, unsigned 
 static int naivemips_console_setup(struct console *co, char *options)
 {
     struct naivemips_port *naivemipsport;
-    int baud = 115200;
+    int baud = 9600;
     int bits = 8;
     int parity = 'n';
     int flow = 'n';
