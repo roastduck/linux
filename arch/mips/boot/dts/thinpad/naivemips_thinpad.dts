@@ -51,7 +51,7 @@
 			reg = <0x1fd003F8 8>;
 			clock-frequency = <153600>;
 			interrupt-parent = <&cpuintc>;
-			interrupts = <2>;
+			interrupts = <4>;
 		};
 
 	};
