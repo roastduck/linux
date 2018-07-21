@@ -19,6 +19,12 @@
 			clocks	= <&ext>;
 			reg = <0>;
 		};
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "mips,4Kc";
+			clocks	= <&ext>;
+			reg = <1>;
+		};
 	};
 
 	ext: ext {

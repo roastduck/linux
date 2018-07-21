@@ -20,6 +20,8 @@
 
 #include <asm/prom.h>
 
+#include "smp.h"
+
 #if IS_ENABLED(CONFIG_THINPAD_SPANTAN6) || IS_ENABLED(CONFIG_THINPAD_NG_ARTIX7)
 #define EARLY_PRINT_UART_DR	((uint32_t*)0xbfd003f8)
 #define EARLY_PRINT_UART_SR	((uint32_t*)0xbfd003fc)
@@ -147,6 +149,10 @@ void __init prom_init(void)
 	writel(3, (uint32_t*)(EARLY_PRINT_UART_BASE+0xc)); //DLAB=0,8N1 Mode
 	writel(0, (uint32_t*)(EARLY_PRINT_UART_BASE+4)); //IER=0
 	writel(0, (uint32_t*)(EARLY_PRINT_UART_BASE+0x10)); //MCR=0
+#endif
+
+#ifdef CONFIG_SMP
+    register_smp_ops(&thinpad_smp_ops);
 #endif
 }
 

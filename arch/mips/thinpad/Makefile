@@ -5,3 +5,4 @@
 obj-y +=	init.o
 obj-y +=	intc.o
 obj-y +=	time.o
+obj-y +=	smp.o

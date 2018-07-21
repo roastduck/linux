@@ -16,12 +16,7 @@
 
 #include <asm/irq_cpu.h>
 
-#if defined(CONFIG_SMP)
-static void ipi_interrupt()
-{
-	// TODO
-}
-#endif
+#include "smp.h"
 
 asmlinkage void plat_irq_dispatch(void)
 {
@@ -35,7 +30,7 @@ asmlinkage void plat_irq_dispatch(void)
 
 #if defined(CONFIG_SMP)
 	if (pending & CAUSEF_IP6) {
-		ipi_interrupt();
+		thinpad_ipi_interrupt();
 		pending = read_c0_cause() & read_c0_status() & ST0_IM;
 	}
 #endif
