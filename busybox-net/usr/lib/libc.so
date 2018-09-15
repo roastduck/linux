@@ -1,0 +1,5 @@
+/* GNU ld script
+   Use the shared library, but some functions are only in
+   the static library, so try that secondarily.  */
+OUTPUT_FORMAT(elf32-tradlittlemips)
+GROUP ( /home/rd/src/nscscc-userenv/lib/libc.so.6 /home/rd/src/nscscc-userenv/lib/libc_nonshared.a  AS_NEEDED ( /home/rd/src/nscscc-userenv/lib/ld.so.1 ) )
