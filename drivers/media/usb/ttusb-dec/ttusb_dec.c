@@ -329,7 +329,7 @@ static int ttusb_dec_send_command(struct ttusb_dec *dec, const u8 command,
 
 	dprintk("%s\n", __func__);
 
-	b = kmalloc(COMMAND_PACKET_SIZE + 4, GFP_KERNEL);
+	b = kzalloc(COMMAND_PACKET_SIZE + 4, GFP_KERNEL);
 	if (!b)
 		return -ENOMEM;
 
@@ -1334,11 +1334,8 @@ static int ttusb_dec_boot_dsp(struct ttusb_dec *dec)
 	dprintk("%s\n", __func__);
 
 	result = request_firmware(&fw_entry, dec->firmware_name, &dec->udev->dev);
-	if (result) {
-		printk(KERN_ERR "%s: Firmware (%s) unavailable.\n",
-		       __func__, dec->firmware_name);
+	if (result)
 		return result;
-	}
 
 	firmware = fw_entry->data;
 	firmware_size = fw_entry->size;

@@ -433,8 +433,6 @@ static int __if_usb_submit_rx_urb(struct if_usb_card *cardp,
 			  skb_tail_pointer(skb),
 			  MRVDRV_ETH_RX_PACKET_BUFFER_SIZE, callbackfn, cardp);
 
-	cardp->rx_urb->transfer_flags |= URB_ZERO_PACKET;
-
 	lbtf_deb_usb2(&cardp->udev->dev, "Pointer for rx_urb %p\n",
 		cardp->rx_urb);
 	ret = usb_submit_urb(cardp->rx_urb, GFP_ATOMIC);
@@ -605,9 +603,10 @@ static inline void process_cmdrequest(int recvlength, uint8_t *recvbuff,
 {
 	unsigned long flags;
 
-	if (recvlength > LBS_CMD_BUFFER_SIZE) {
+	if (recvlength < MESSAGE_HEADER_LEN ||
+	    recvlength > LBS_CMD_BUFFER_SIZE) {
 		lbtf_deb_usbd(&cardp->udev->dev,
-			     "The receive buffer is too large\n");
+			     "The receive buffer is invalid: %d\n", recvlength);
 		kfree_skb(skb);
 		return;
 	}
@@ -818,8 +817,6 @@ static int if_usb_prog_firmware(struct if_usb_card *cardp)
 	kernel_param_lock(THIS_MODULE);
 	ret = request_firmware(&cardp->fw, lbtf_fw_name, &cardp->udev->dev);
 	if (ret < 0) {
-		pr_err("request_firmware() failed with %#x\n", ret);
-		pr_err("firmware %s not found\n", lbtf_fw_name);
 		kernel_param_unlock(THIS_MODULE);
 		goto done;
 	}

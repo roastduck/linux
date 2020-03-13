@@ -2416,12 +2416,9 @@ static int stk9090m_frontend_attach(struct dvb_usb_adapter *adap)
 
 	dib9000_i2c_enumeration(&adap->dev->i2c_adap, 1, 0x10, 0x80);
 
-	if (request_firmware(&state->frontend_firmware, "dib9090.fw", &adap->dev->udev->dev)) {
-		deb_info("%s: Upload failed. (file not found?)\n", __func__);
+	if (request_firmware(&state->frontend_firmware, "dib9090.fw", &adap->dev->udev->dev))
 		return -ENODEV;
-	} else {
-		deb_info("%s: firmware read %zu bytes.\n", __func__, state->frontend_firmware->size);
-	}
+	deb_info("%s: firmware read %zu bytes.\n", __func__, state->frontend_firmware->size);
 	stk9090m_config.microcode_B_fe_size = state->frontend_firmware->size;
 	stk9090m_config.microcode_B_fe_buffer = state->frontend_firmware->data;
 
@@ -2442,9 +2439,13 @@ static int dib9090_tuner_attach(struct dvb_usb_adapter *adap)
 		8, 0x0486,
 	};
 
+	if (!IS_ENABLED(CONFIG_DVB_DIB9000))
+		return -ENODEV;
 	if (dvb_attach(dib0090_fw_register, adap->fe_adap[0].fe, i2c, &dib9090_dib0090_config) == NULL)
 		return -ENODEV;
 	i2c = dib9000_get_i2c_master(adap->fe_adap[0].fe, DIBX000_I2C_INTERFACE_GPIO_1_2, 0);
+	if (!i2c)
+		return -ENODEV;
 	if (dib01x0_pmu_update(i2c, data_dib190, 10) != 0)
 		return -ENODEV;
 	dib0700_set_i2c_speed(adap->dev, 1500);
@@ -2482,12 +2483,9 @@ static int nim9090md_frontend_attach(struct dvb_usb_adapter *adap)
 	msleep(20);
 	dib0700_set_gpio(adap->dev, GPIO0, GPIO_OUT, 1);
 
-	if (request_firmware(&state->frontend_firmware, "dib9090.fw", &adap->dev->udev->dev)) {
-		deb_info("%s: Upload failed. (file not found?)\n", __func__);
+	if (request_firmware(&state->frontend_firmware, "dib9090.fw", &adap->dev->udev->dev))
 		return -EIO;
-	} else {
-		deb_info("%s: firmware read %zu bytes.\n", __func__, state->frontend_firmware->size);
-	}
+	deb_info("%s: firmware read %zu bytes.\n", __func__, state->frontend_firmware->size);
 	nim9090md_config[0].microcode_B_fe_size = state->frontend_firmware->size;
 	nim9090md_config[0].microcode_B_fe_buffer = state->frontend_firmware->data;
 	nim9090md_config[1].microcode_B_fe_size = state->frontend_firmware->size;
@@ -2520,10 +2518,14 @@ static int nim9090md_tuner_attach(struct dvb_usb_adapter *adap)
 		0, 0x00ef,
 		8, 0x0406,
 	};
+	if (!IS_ENABLED(CONFIG_DVB_DIB9000))
+		return -ENODEV;
 	i2c = dib9000_get_tuner_interface(adap->fe_adap[0].fe);
 	if (dvb_attach(dib0090_fw_register, adap->fe_adap[0].fe, i2c, &nim9090md_dib0090_config[0]) == NULL)
 		return -ENODEV;
 	i2c = dib9000_get_i2c_master(adap->fe_adap[0].fe, DIBX000_I2C_INTERFACE_GPIO_1_2, 0);
+	if (!i2c)
+		return -ENODEV;
 	if (dib01x0_pmu_update(i2c, data_dib190, 10) < 0)
 		return -ENODEV;
 

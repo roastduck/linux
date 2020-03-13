@@ -21,6 +21,7 @@
 #include <linux/of_fdt.h>
 #include <linux/platform_device.h>
 #include <linux/screen_info.h>
+#include <linux/security.h>
 
 #include <asm/efi.h>
 
@@ -257,6 +258,9 @@ void __init efi_init(void)
 		return;
 	}
 
+	efi_set_secure_boot(params.secure_boot);
+	init_lockdown();
+
 	reserve_regions();
 	efi_esrt_init();
 
@@ -265,6 +269,10 @@ void __init efi_init(void)
 				    (params.mmap & ~PAGE_MASK)));
 
 	init_screen_info();
+
+	/* ARM does not permit early mappings to persist across paging_init() */
+	if (IS_ENABLED(CONFIG_ARM))
+		efi_memmap_unmap();
 }
 
 static int __init register_gop_device(void)

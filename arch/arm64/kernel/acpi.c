@@ -33,6 +33,8 @@
 #include <asm/pgtable.h>
 #include <asm/smp_plat.h>
 
+#include <acpi/apei.h>
+
 int acpi_noirq = 1;		/* skip ACPI IRQ initialization */
 int acpi_disabled = 1;
 EXPORT_SYMBOL(acpi_disabled);
@@ -154,10 +156,14 @@ static int __init acpi_fadt_sanity_check(void)
 	 */
 	if (table->revision < 5 ||
 	   (table->revision == 5 && fadt->minor_revision < 1)) {
-		pr_err("Unsupported FADT revision %d.%d, should be 5.1+\n",
+		pr_err(FW_BUG "Unsupported FADT revision %d.%d, should be 5.1+\n",
 		       table->revision, fadt->minor_revision);
-		ret = -EINVAL;
-		goto out;
+
+		if (!fadt->arm_boot_flags) {
+			ret = -EINVAL;
+			goto out;
+		}
+		pr_err("FADT has ARM boot flags set, assuming 5.1\n");
 	}
 
 	if (!(fadt->flags & ACPI_FADT_HW_REDUCED)) {
@@ -172,6 +178,33 @@ out:
 	 */
 	acpi_put_table(table);
 	return ret;
+}
+
+/*
+ * acpi_fixup_m400_quirks - Work-around for HPE ProLiant m400 APEI firmware
+ * problems.
+ */
+static void __init acpi_fixup_m400_quirks(void)
+{
+	acpi_status status;
+	struct acpi_table_header *header;
+#if !defined(CONFIG_ACPI_APEI)
+	int hest_disable = HEST_DISABLED;
+#endif
+
+	if (!IS_ENABLED(CONFIG_ACPI_APEI) || hest_disable != HEST_ENABLED)
+		return;
+
+	status = acpi_get_table(ACPI_SIG_HEST, 0, &header);
+
+	if (ACPI_SUCCESS(status) && !strncmp(header->oem_id, "HPE   ", 6) &&
+		!strncmp(header->oem_table_id, "ProLiant", 8) &&
+		MIDR_IMPLEMENTOR(read_cpuid_id()) == ARM_CPU_IMP_APM) {
+		hest_disable = HEST_DISABLED;
+		pr_info("Disabled APEI for m400.\n");
+	}
+
+	acpi_put_table(header);
 }
 
 /*
@@ -229,11 +262,14 @@ done:
 	if (acpi_disabled) {
 		if (earlycon_acpi_spcr_enable)
 			early_init_dt_scan_chosen_stdout();
-	} else {
-		acpi_parse_spcr(earlycon_acpi_spcr_enable, true);
-		if (IS_ENABLED(CONFIG_ACPI_BGRT))
-			acpi_table_parse(ACPI_SIG_BGRT, acpi_parse_bgrt);
+		return;
 	}
+
+	acpi_parse_spcr(earlycon_acpi_spcr_enable, true);
+	if (IS_ENABLED(CONFIG_ACPI_BGRT))
+		acpi_table_parse(ACPI_SIG_BGRT, acpi_parse_bgrt);
+
+	acpi_fixup_m400_quirks();
 }
 
 pgprot_t __acpi_get_mem_attribute(phys_addr_t addr)

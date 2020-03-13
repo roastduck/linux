@@ -581,8 +581,6 @@ static int myri10ge_load_hotplug_firmware(struct myri10ge_priv *mgp, u32 * size)
 	unsigned i;
 
 	if ((status = request_firmware(&fw, mgp->fw_name, dev)) < 0) {
-		dev_err(dev, "Unable to load %s firmware image via hotplug\n",
-			mgp->fw_name);
 		status = -EINVAL;
 		goto abort_with_nothing;
 	}
@@ -3922,7 +3920,7 @@ static int myri10ge_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	 * setup (if available). */
 	status = myri10ge_request_irq(mgp);
 	if (status != 0)
-		goto abort_with_firmware;
+		goto abort_with_slices;
 	myri10ge_free_irq(mgp);
 
 	/* Save configuration space to be restored if the

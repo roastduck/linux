@@ -1499,8 +1499,8 @@ static int modet_to_package(struct go7007 *go, __le16 *code, int space)
 	return cnt;
 }
 
-static int do_special(struct go7007 *go, u16 type, __le16 *code, int space,
-			int *framelen)
+static noinline_for_stack int do_special(struct go7007 *go, u16 type,
+					 __le16 *code, int space, int *framelen)
 {
 	switch (type) {
 	case SPECIAL_FRM_HEAD:
@@ -1573,12 +1573,8 @@ int go7007_construct_fw_image(struct go7007 *go, u8 **fw, int *fwlen)
 	default:
 		return -1;
 	}
-	if (request_firmware(&fw_entry, GO7007_FW_NAME, go->dev)) {
-		dev_err(go->dev,
-			"unable to load firmware from file \"%s\"\n",
-			GO7007_FW_NAME);
+	if (request_firmware(&fw_entry, GO7007_FW_NAME, go->dev))
 		return -1;
-	}
 	code = kcalloc(codespace, 2, GFP_KERNEL);
 	if (code == NULL)
 		goto fw_failed;

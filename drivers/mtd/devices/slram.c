@@ -226,6 +226,9 @@ static int parse_cmdline(char *devname, char *szstart, char *szlength)
 	unsigned long devstart;
 	unsigned long devlength;
 
+	if (kernel_is_locked_down("Command line-specified device addresses"))
+		return -EPERM;
+
 	if ((!devname) || (!szstart) || (!szlength)) {
 		unregister_devices();
 		return(-EINVAL);

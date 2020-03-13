@@ -409,6 +409,7 @@ struct files_struct *get_files_struct(struct task_struct *task)
 
 	return files;
 }
+EXPORT_SYMBOL_GPL(get_files_struct);
 
 void put_files_struct(struct files_struct *files)
 {
@@ -421,6 +422,7 @@ void put_files_struct(struct files_struct *files)
 		kmem_cache_free(files_cachep, files);
 	}
 }
+EXPORT_SYMBOL_GPL(put_files_struct);
 
 void reset_files_struct(struct files_struct *files)
 {
@@ -457,6 +459,7 @@ struct files_struct init_files = {
 		.full_fds_bits	= init_files.full_fds_bits_init,
 	},
 	.file_lock	= __SPIN_LOCK_UNLOCKED(init_files.file_lock),
+	.resize_wait	= __WAIT_QUEUE_HEAD_INITIALIZER(init_files.resize_wait),
 };
 
 static unsigned int find_next_fd(struct fdtable *fdt, unsigned int start)
@@ -533,6 +536,7 @@ out:
 	spin_unlock(&files->file_lock);
 	return error;
 }
+EXPORT_SYMBOL_GPL(__alloc_fd);
 
 static int alloc_fd(unsigned start, unsigned flags)
 {
@@ -606,6 +610,7 @@ void __fd_install(struct files_struct *files, unsigned int fd,
 	rcu_assign_pointer(fdt->fd[fd], file);
 	rcu_read_unlock_sched();
 }
+EXPORT_SYMBOL_GPL(__fd_install);
 
 void fd_install(unsigned int fd, struct file *file)
 {

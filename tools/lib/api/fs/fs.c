@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mount.h>
+#include <linux/string.h>
 
 #include "fs.h"
 #include "debug-internal.h"
@@ -219,7 +220,7 @@ static bool fs__env_override(struct fs *fs)
 		return false;
 
 	fs->found = true;
-	strncpy(fs->path, override_path, sizeof(fs->path));
+	strlcpy(fs->path, override_path, sizeof(fs->path));
 	return true;
 }
 

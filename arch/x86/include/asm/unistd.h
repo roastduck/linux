@@ -6,9 +6,9 @@
 
 
 # ifdef CONFIG_X86_X32_ABI
-#  define __SYSCALL_MASK (~(__X32_SYSCALL_BIT))
+#  define NR_non_x32_syscalls 512
 # else
-#  define __SYSCALL_MASK (~0)
+#  define NR_non_x32_syscalls NR_syscalls
 # endif
 
 # ifdef CONFIG_X86_32

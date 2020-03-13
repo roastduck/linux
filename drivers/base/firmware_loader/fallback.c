@@ -604,7 +604,7 @@ static int fw_load_from_user_helper(struct firmware *firmware,
 	if (opt_flags & FW_OPT_NOWAIT) {
 		timeout = usermodehelper_read_lock_wait(timeout);
 		if (!timeout) {
-			dev_dbg(device, "firmware: %s loading timed out\n",
+			dev_err(device, "firmware: %s loading timed out\n",
 				name);
 			return -EBUSY;
 		}
@@ -659,7 +659,7 @@ static bool fw_run_sysfs_fallback(enum fw_opt opt_flags)
 	/* Also permit LSMs and IMA to fail firmware sysfs fallback */
 	ret = security_kernel_load_data(LOADING_FIRMWARE);
 	if (ret < 0)
-		return ret;
+		return false;
 
 	return fw_force_sysfs_fallback(opt_flags);
 }

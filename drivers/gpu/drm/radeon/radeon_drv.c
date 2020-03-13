@@ -43,6 +43,8 @@
 #include <drm/drm_fb_helper.h>
 
 #include <drm/drm_crtc_helper.h>
+#include <linux/namei.h>
+#include <linux/path.h>
 
 /*
  * KMS wrapper.
@@ -316,6 +318,28 @@ static struct drm_driver kms_driver;
 
 bool radeon_device_is_virtual(void);
 
+/* Test that /lib/firmware/radeon is a directory (or symlink to a
+ * directory).  We could try to match the udev search path, but let's
+ * keep it simple.
+ */
+static bool radeon_firmware_installed(void)
+{
+#if IS_BUILTIN(CONFIG_DRM_RADEON)
+	/* It may be too early to tell.  Assume it's there. */
+	return true;
+#else
+	struct path path;
+
+	if (kern_path("/lib/firmware/radeon", LOOKUP_DIRECTORY | LOOKUP_FOLLOW,
+		      &path) == 0) {
+		path_put(&path);
+		return true;
+	}
+
+	return false;
+#endif
+}
+
 static int radeon_kick_out_firmware_fb(struct pci_dev *pdev)
 {
 	struct apertures_struct *ap;
@@ -340,10 +364,48 @@ static int radeon_kick_out_firmware_fb(struct pci_dev *pdev)
 static int radeon_pci_probe(struct pci_dev *pdev,
 			    const struct pci_device_id *ent)
 {
+	unsigned long flags = 0;
 	int ret;
+
+	if (!ent)
+		return -ENODEV; /* Avoid NULL-ptr deref in drm_get_pci_dev */
+
+	flags = ent->driver_data;
+
+	if (!radeon_si_support) {
+		switch (flags & RADEON_FAMILY_MASK) {
+		case CHIP_TAHITI:
+		case CHIP_PITCAIRN:
+		case CHIP_VERDE:
+		case CHIP_OLAND:
+		case CHIP_HAINAN:
+			dev_info(&pdev->dev,
+				 "SI support disabled by module param\n");
+			return -ENODEV;
+		}
+	}
+	if (!radeon_cik_support) {
+		switch (flags & RADEON_FAMILY_MASK) {
+		case CHIP_KAVERI:
+		case CHIP_BONAIRE:
+		case CHIP_HAWAII:
+		case CHIP_KABINI:
+		case CHIP_MULLINS:
+			dev_info(&pdev->dev,
+				 "CIK support disabled by module param\n");
+			return -ENODEV;
+		}
+	}
 
 	if (vga_switcheroo_client_probe_defer(pdev))
 		return -EPROBE_DEFER;
+
+	if ((ent->driver_data & RADEON_FAMILY_MASK) >= CHIP_R600 &&
+	    !radeon_firmware_installed()) {
+		DRM_ERROR("radeon kernel modesetting for R600 or later requires firmware installed\n");
+		pr_err_once("See https://wiki.debian.org/Firmware for information about missing firmware\n");
+		return -ENODEV;
+	}
 
 	/* Get rid of things like offb */
 	ret = radeon_kick_out_firmware_fb(pdev);

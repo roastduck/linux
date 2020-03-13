@@ -506,6 +506,9 @@ static int rds_connect(struct socket *sock, struct sockaddr *uaddr,
 	struct rds_sock *rs = rds_sk_to_rs(sk);
 	int ret = 0;
 
+	if (addr_len < offsetofend(struct sockaddr, sa_family))
+		return -EINVAL;
+
 	lock_sock(sk);
 
 	switch (uaddr->sa_family) {
@@ -833,4 +836,4 @@ MODULE_DESCRIPTION("RDS: Reliable Datagram Sockets"
 		   " v" DRV_VERSION " (" DRV_RELDATE ")");
 MODULE_VERSION(DRV_VERSION);
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_ALIAS_NETPROTO(PF_RDS);
+/* MODULE_ALIAS_NETPROTO(PF_RDS); */

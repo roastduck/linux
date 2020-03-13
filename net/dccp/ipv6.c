@@ -433,8 +433,8 @@ static struct sock *dccp_v6_request_recv_sock(const struct sock *sk,
 		newnp->ipv6_mc_list = NULL;
 		newnp->ipv6_ac_list = NULL;
 		newnp->ipv6_fl_list = NULL;
-		newnp->mcast_oif   = inet6_iif(skb);
-		newnp->mcast_hops  = ipv6_hdr(skb)->hop_limit;
+		newnp->mcast_oif   = inet_iif(skb);
+		newnp->mcast_hops  = ip_hdr(skb)->ttl;
 
 		/*
 		 * No need to charge this sock to the relevant IPv6 refcnt debug socks count
@@ -1162,8 +1162,8 @@ module_exit(dccp_v6_exit);
  * values directly, Also cover the case where the protocol is not specified,
  * i.e. net-pf-PF_INET6-proto-0-type-SOCK_DCCP
  */
-MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET6, 33, 6);
-MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET6, 0, 6);
+/* MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET6, 33, 6); */
+/* MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET6, 0, 6); */
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Arnaldo Carvalho de Melo <acme@mandriva.com>");
 MODULE_DESCRIPTION("DCCPv6 - Datagram Congestion Controlled Protocol");

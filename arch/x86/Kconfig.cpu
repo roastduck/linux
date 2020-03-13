@@ -337,7 +337,7 @@ config X86_USE_PPRO_CHECKSUM
 
 config X86_USE_3DNOW
 	def_bool y
-	depends on (MCYRIXIII || MK7 || MGEODE_LX) && !UML
+	depends on (MCYRIXIII || MK7 || MGEODE_LX) && !X86_GENERIC && !UML
 
 #
 # P6_NOPs are a relatively minor optimization that require a family >=

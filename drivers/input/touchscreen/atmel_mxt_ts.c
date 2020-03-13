@@ -1586,10 +1586,10 @@ static int mxt_update_cfg(struct mxt_data *data, const struct firmware *fw)
 	/* T7 config may have changed */
 	mxt_init_t7_power_cfg(data);
 
-release_raw:
-	kfree(cfg.raw);
 release_mem:
 	kfree(cfg.mem);
+release_raw:
+	kfree(cfg.raw);
 	return ret;
 }
 
@@ -2783,10 +2783,8 @@ static int mxt_load_fw(struct device *dev, const char *fn)
 	int ret;
 
 	ret = request_firmware(&fw, fn, dev);
-	if (ret) {
-		dev_err(dev, "Unable to open firmware %s\n", fn);
+	if (ret)
 		return ret;
-	}
 
 	/* Check for incorrect enc file */
 	ret = mxt_check_firmware_format(dev, fw);
@@ -3162,6 +3160,8 @@ static int __maybe_unused mxt_suspend(struct device *dev)
 
 	mutex_unlock(&input_dev->mutex);
 
+	disable_irq(data->irq);
+
 	return 0;
 }
 
@@ -3173,6 +3173,8 @@ static int __maybe_unused mxt_resume(struct device *dev)
 
 	if (!input_dev)
 		return 0;
+
+	enable_irq(data->irq);
 
 	mutex_lock(&input_dev->mutex);
 

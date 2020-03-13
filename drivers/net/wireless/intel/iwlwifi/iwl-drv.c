@@ -236,8 +236,6 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 	}
 
 	if (drv->fw_index < cfg->ucode_api_min) {
-		IWL_ERR(drv, "no suitable firmware found!\n");
-
 		if (cfg->ucode_api_min == cfg->ucode_api_max) {
 			IWL_ERR(drv, "%s%d is required\n", fw_pre_name,
 				cfg->ucode_api_max);
@@ -1547,7 +1545,6 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	goto free;
 
  out_free_fw:
-	iwl_dealloc_ucode(drv);
 	release_firmware(ucode_raw);
  out_unbind:
 	complete(&drv->request_firmware_complete);

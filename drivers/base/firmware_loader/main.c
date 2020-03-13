@@ -328,20 +328,24 @@ fw_get_filesystem_firmware(struct device *device, struct fw_priv *fw_priv)
 		rc = kernel_read_file_from_path(path, &fw_priv->data, &size,
 						msize, id);
 		if (rc) {
-			if (rc == -ENOENT)
-				dev_dbg(device, "loading %s failed with error %d\n",
-					 path, rc);
-			else
-				dev_warn(device, "loading %s failed with error %d\n",
-					 path, rc);
+			dev_dbg(device, "loading %s failed with error %d\n",
+				path, rc);
 			continue;
 		}
-		dev_dbg(device, "direct-loading %s\n", fw_priv->fw_name);
+		dev_info(device, "firmware: direct-loading firmware %s\n",
+			 fw_priv->fw_name);
 		fw_priv->size = size;
 		fw_state_done(fw_priv);
 		break;
 	}
 	__putname(path);
+
+	if (rc) {
+		dev_err(device, "firmware: failed to load %s (%d)\n",
+			fw_priv->fw_name, rc);
+		if (rc == -ENOENT)
+			pr_err_once("See https://wiki.debian.org/Firmware for information about missing firmware\n");
+	}
 
 	return rc;
 }

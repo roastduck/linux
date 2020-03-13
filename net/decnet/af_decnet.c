@@ -1213,7 +1213,7 @@ static __poll_t dn_poll(struct file *file, struct socket *sock, poll_table  *wai
 	struct dn_scp *scp = DN_SK(sk);
 	__poll_t mask = datagram_poll(file, sock, wait);
 
-	if (!skb_queue_empty(&scp->other_receive_queue))
+	if (!skb_queue_empty_lockless(&scp->other_receive_queue))
 		mask |= EPOLLRDBAND;
 
 	return mask;
@@ -2346,7 +2346,7 @@ static const struct proto_ops dn_proto_ops = {
 MODULE_DESCRIPTION("The Linux DECnet Network Protocol");
 MODULE_AUTHOR("Linux DECnet Project Team");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS_NETPROTO(PF_DECnet);
+/* MODULE_ALIAS_NETPROTO(PF_DECnet); */
 
 static const char banner[] __initconst = KERN_INFO
 "NET4: DECnet for Linux: V.2.5.68s (C) 1995-2003 Linux DECnet Project Team\n";

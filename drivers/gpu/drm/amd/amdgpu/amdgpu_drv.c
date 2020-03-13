@@ -33,6 +33,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/vga_switcheroo.h>
 #include <drm/drm_crtc_helper.h>
+#include <linux/namei.h>
+#include <linux/path.h>
 
 #include "amdgpu.h"
 #include "amdgpu_irq.h"
@@ -753,6 +755,7 @@ static const struct pci_device_id pciidlist[] = {
 	/* VEGAM */
 	{0x1002, 0x694C, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGAM},
 	{0x1002, 0x694E, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGAM},
+	{0x1002, 0x694F, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGAM},
 	/* Vega 10 */
 	{0x1002, 0x6860, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
 	{0x1002, 0x6861, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
@@ -761,7 +764,13 @@ static const struct pci_device_id pciidlist[] = {
 	{0x1002, 0x6864, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
 	{0x1002, 0x6867, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
 	{0x1002, 0x6868, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
+	{0x1002, 0x6869, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
+	{0x1002, 0x686a, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
+	{0x1002, 0x686b, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
 	{0x1002, 0x686c, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
+	{0x1002, 0x686d, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
+	{0x1002, 0x686e, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
+	{0x1002, 0x686f, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
 	{0x1002, 0x687f, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA10},
 	/* Vega 12 */
 	{0x1002, 0x69A0, PCI_ANY_ID, PCI_ANY_ID, 0, 0, CHIP_VEGA12},
@@ -785,6 +794,28 @@ static const struct pci_device_id pciidlist[] = {
 MODULE_DEVICE_TABLE(pci, pciidlist);
 
 static struct drm_driver kms_driver;
+
+/* Test that /lib/firmware/amdgpu is a directory (or symlink to a
+ * directory).  We could try to match the udev search path, but let's
+ * keep it simple.
+ */
+static bool amdgpu_firmware_installed(void)
+{
+#if IS_BUILTIN(CONFIG_DRM_AMDGPU)
+	/* It may be too early to tell.  Assume it's there. */
+	return true;
+#else
+	struct path path;
+
+	if (kern_path("/lib/firmware/amdgpu", LOOKUP_DIRECTORY | LOOKUP_FOLLOW,
+		      &path) == 0) {
+		path_put(&path);
+		return true;
+	}
+
+	return false;
+#endif
+}
 
 static int amdgpu_kick_out_firmware_fb(struct pci_dev *pdev)
 {
@@ -826,6 +857,12 @@ static int amdgpu_pci_probe(struct pci_dev *pdev,
 		return -ENODEV;
 	}
 
+	if (!amdgpu_firmware_installed()) {
+		DRM_ERROR("amdgpu requires firmware installed\n");
+		pr_err_once("See https://wiki.debian.org/Firmware for information about missing firmware\n");
+		return -ENODEV;
+	}
+
 	/*
 	 * Initialize amdkfd before starting radeon. If it was not loaded yet,
 	 * defer radeon probing
@@ -833,6 +870,41 @@ static int amdgpu_pci_probe(struct pci_dev *pdev,
 	ret = amdgpu_amdkfd_init();
 	if (ret == -EPROBE_DEFER)
 		return ret;
+
+#ifdef CONFIG_DRM_AMDGPU_SI
+	if (!amdgpu_si_support) {
+		switch (flags & AMD_ASIC_MASK) {
+		case CHIP_TAHITI:
+		case CHIP_PITCAIRN:
+		case CHIP_VERDE:
+		case CHIP_OLAND:
+		case CHIP_HAINAN:
+			dev_info(&pdev->dev,
+				 "SI support provided by radeon.\n");
+			dev_info(&pdev->dev,
+				 "Use radeon.si_support=0 amdgpu.si_support=1 to override.\n"
+				);
+			return -ENODEV;
+		}
+	}
+#endif
+#ifdef CONFIG_DRM_AMDGPU_CIK
+	if (!amdgpu_cik_support) {
+		switch (flags & AMD_ASIC_MASK) {
+		case CHIP_KAVERI:
+		case CHIP_BONAIRE:
+		case CHIP_HAWAII:
+		case CHIP_KABINI:
+		case CHIP_MULLINS:
+			dev_info(&pdev->dev,
+				 "CIK support provided by radeon.\n");
+			dev_info(&pdev->dev,
+				 "Use radeon.cik_support=0 amdgpu.cik_support=1 to override.\n"
+				);
+			return -ENODEV;
+		}
+	}
+#endif
 
 	/* Get rid of things like offb */
 	ret = amdgpu_kick_out_firmware_fb(pdev);

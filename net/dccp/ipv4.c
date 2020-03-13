@@ -121,7 +121,7 @@ int dccp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 						    inet->inet_daddr,
 						    inet->inet_sport,
 						    inet->inet_dport);
-	inet->inet_id = dp->dccps_iss ^ jiffies;
+	inet->inet_id = prandom_u32();
 
 	err = dccp_connect(sk);
 	rt = NULL;
@@ -417,7 +417,7 @@ struct sock *dccp_v4_request_recv_sock(const struct sock *sk,
 	RCU_INIT_POINTER(newinet->inet_opt, rcu_dereference(ireq->ireq_opt));
 	newinet->mc_index  = inet_iif(skb);
 	newinet->mc_ttl	   = ip_hdr(skb)->ttl;
-	newinet->inet_id   = jiffies;
+	newinet->inet_id   = prandom_u32();
 
 	if (dst == NULL && (dst = inet_csk_route_child_sock(sk, newsk, req)) == NULL)
 		goto put_and_exit;
@@ -1079,8 +1079,8 @@ module_exit(dccp_v4_exit);
  * values directly, Also cover the case where the protocol is not specified,
  * i.e. net-pf-PF_INET-proto-0-type-SOCK_DCCP
  */
-MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET, 33, 6);
-MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET, 0, 6);
+/* MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET, 33, 6); */
+/* MODULE_ALIAS_NET_PF_PROTO_TYPE(PF_INET, 0, 6); */
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Arnaldo Carvalho de Melo <acme@mandriva.com>");
 MODULE_DESCRIPTION("DCCP - Datagram Congestion Controlled Protocol");

@@ -560,7 +560,7 @@ static int propagate_exception(struct dev_cgroup *devcg_root,
 		    devcg->behavior == DEVCG_DEFAULT_ALLOW) {
 			rc = dev_exception_add(devcg, ex);
 			if (rc)
-				break;
+				return rc;
 		} else {
 			/*
 			 * in the other possible cases:
@@ -824,3 +824,4 @@ int __devcgroup_check_permission(short type, u32 major, u32 minor,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(__devcgroup_check_permission);

@@ -60,11 +60,8 @@ static int get_firmware(const struct firmware **fw_entry,
 		"firmware requested: %s\n", card_fw[fw_index].data);
 	snprintf(name, sizeof(name), "ea/%s", card_fw[fw_index].data);
 	err = request_firmware(fw_entry, name, &chip->pci->dev);
-	if (err < 0)
-		dev_err(chip->card->dev,
-			"get_firmware(): Firmware not available (%d)\n", err);
 #ifdef CONFIG_PM_SLEEP
-	else
+	if (!err)
 		chip->fw_cache[fw_index] = *fw_entry;
 #endif
 	return err;
@@ -1954,6 +1951,11 @@ static int snd_echo_create(struct snd_card *card,
 	}
 	chip->dsp_registers = (volatile u32 __iomem *)
 		ioremap_nocache(chip->dsp_registers_phys, sz);
+	if (!chip->dsp_registers) {
+		dev_err(chip->card->dev, "ioremap failed\n");
+		snd_echo_free(chip);
+		return -ENOMEM;
+	}
 
 	if (request_irq(pci->irq, snd_echo_interrupt, IRQF_SHARED,
 			KBUILD_MODNAME, chip)) {

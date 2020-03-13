@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
 
 #include <errno.h>
+#include "../../util/debug.h"
 #ifndef REMOTE_UNWIND_LIBUNWIND
 #include <libunwind.h>
 #include "perf_regs.h"
 #include "../../util/unwind.h"
-#include "../../util/debug.h"
 #endif
 
 #ifdef HAVE_ARCH_X86_64_SUPPORT
@@ -67,7 +67,7 @@ int LIBUNWIND__ARCH_REG_ID(int regnum)
 		break;
 	default:
 		pr_err("unwind: invalid reg id %d\n", regnum);
-		return -EINVAL;
+		return -1;
 	}
 
 	return id;
@@ -107,7 +107,7 @@ int LIBUNWIND__ARCH_REG_ID(int regnum)
 		break;
 	default:
 		pr_err("unwind: invalid reg id %d\n", regnum);
-		return -EINVAL;
+		return -1;
 	}
 
 	return id;

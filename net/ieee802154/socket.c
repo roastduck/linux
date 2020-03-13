@@ -1018,6 +1018,9 @@ static int ieee802154_create(struct net *net, struct socket *sock,
 
 	switch (sock->type) {
 	case SOCK_RAW:
+		rc = -EPERM;
+		if (!capable(CAP_NET_RAW))
+			goto out;
 		proto = &ieee802154_raw_prot;
 		ops = &ieee802154_raw_ops;
 		break;
@@ -1141,4 +1144,4 @@ module_init(af_ieee802154_init);
 module_exit(af_ieee802154_remove);
 
 MODULE_LICENSE("GPL");
-MODULE_ALIAS_NETPROTO(PF_IEEE802154);
+/* MODULE_ALIAS_NETPROTO(PF_IEEE802154); */

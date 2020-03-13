@@ -94,7 +94,8 @@ export prefix libdir src obj
 libdir_SQ = $(subst ','\'',$(libdir))
 libdir_relative_SQ = $(subst ','\'',$(libdir_relative))
 
-LIB_FILE = libbpf.a libbpf.so
+LIB_FILE = libbpf.a libbpf.so.$(LIBBPF_VERSION)
+PC_FILE = libbpf.pc
 
 VERSION		= $(BPF_VERSION)
 PATCHLEVEL	= $(BPF_PATCHLEVEL)
@@ -103,7 +104,7 @@ EXTRAVERSION	= $(BPF_EXTRAVERSION)
 OBJ		= $@
 N		=
 
-LIBBPF_VERSION = $(BPF_VERSION).$(BPF_PATCHLEVEL).$(BPF_EXTRAVERSION)
+LIBBPF_VERSION = $(shell make --no-print-directory -sC ../../.. kernelversion | cut -d. -f1,2)
 
 # Set compile option CFLAGS
 ifdef EXTRA_CFLAGS
@@ -144,12 +145,14 @@ include $(srctree)/tools/build/Makefile.include
 
 BPF_IN    := $(OUTPUT)libbpf-in.o
 LIB_FILE := $(addprefix $(OUTPUT),$(LIB_FILE))
+PC_FILE := $(addprefix $(OUTPUT),$(PC_FILE))
 
-CMD_TARGETS = $(LIB_FILE)
+CMD_TARGETS = $(LIB_FILE) $(PC_FILE)
 
 TARGETS = $(CMD_TARGETS)
 
-all: fixdep all_cmd
+all: fixdep
+	$(Q)$(MAKE) all_cmd
 
 all_cmd: $(CMD_TARGETS)
 
@@ -168,11 +171,17 @@ $(BPF_IN): force elfdep bpfdep
 	echo "Warning: Kernel ABI header at 'tools/include/uapi/linux/if_link.h' differs from latest version at 'include/uapi/linux/if_link.h'" >&2 )) || true
 	$(Q)$(MAKE) $(build)=libbpf
 
-$(OUTPUT)libbpf.so: $(BPF_IN)
-	$(QUIET_LINK)$(CC) --shared $^ -o $@
+$(OUTPUT)libbpf.so.$(LIBBPF_VERSION): $(BPF_IN)
+	$(QUIET_LINK)$(CC) --shared $^ -lelf -Wl,-soname,$(@F) -o $@
 
 $(OUTPUT)libbpf.a: $(BPF_IN)
 	$(QUIET_LINK)$(RM) $@; $(AR) rcs $@ $^
+
+$(OUTPUT)libbpf.pc:
+	$(QUIET_GEN)sed -e "s|@PREFIX@|$(prefix)|" \
+		-e "s|@LIBDIR@|$(libdir_SQ)|" \
+		-e "s|@VERSION@|$(LIBBPF_VERSION)|" \
+		< libbpf.pc.template > $@
 
 define do_install
 	if [ ! -d '$(DESTDIR_SQ)$2' ]; then		\
@@ -184,6 +193,7 @@ endef
 install_lib: all_cmd
 	$(call QUIET_INSTALL, $(LIB_FILE)) \
 		$(call do_install,$(LIB_FILE),$(libdir_SQ))
+	$(Q)ln -sf libbpf.so.$(LIBBPF_VERSION) $(DESTDIR_SQ)$(libdir_SQ)/libbpf.so
 
 install_headers:
 	$(call QUIET_INSTALL, headers) \
@@ -191,7 +201,12 @@ install_headers:
 		$(call do_install,libbpf.h,$(prefix)/include/bpf,644);
 		$(call do_install,btf.h,$(prefix)/include/bpf,644);
 
-install: install_lib
+install_pkgconfig: $(PC_FILE)
+	$(call QUIET_INSTALL, $(PC_FILE)) \
+		$(call do_install,$(PC_FILE),$(libdir_SQ)/pkgconfig,644)
+
+
+install: install_lib install_pkgconfig
 
 ### Cleaning rules
 
@@ -200,7 +215,7 @@ config-clean:
 	$(Q)$(MAKE) -C $(srctree)/tools/build/feature/ clean >/dev/null
 
 clean:
-	$(call QUIET_CLEAN, libbpf) $(RM) *.o *~ $(TARGETS) *.a *.so .*.d .*.cmd \
+	$(call QUIET_CLEAN, libbpf) $(RM) *.o *~ $(TARGETS) *.a *.so .*.d .*.cmd *.pc \
 		$(RM) LIBBPF-CFLAGS
 	$(call QUIET_CLEAN, core-gen) $(RM) $(OUTPUT)FEATURE-DUMP.libbpf
 
