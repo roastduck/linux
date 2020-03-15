@@ -2476,6 +2476,14 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 			return -EINVAL;
 		error = arch_prctl_spec_ctrl_set(me, arg2, arg3);
 		break;
+	case PR_INIT_ASYNC:
+		if (arg2 || arg3 || arg4 || arg5)
+			return -EINVAL;
+		printk(KERN_DEBUG "Called PR_INIT_ASYNC\n");
+	case PR_WAIT_ASYNC:
+		if (arg2 || arg3 || arg4 || arg5)
+			return -EINVAL;
+		printk(KERN_DEBUG "Called PR_WAIT_ASYNC\n");
 	default:
 		error = -EINVAL;
 		break;
