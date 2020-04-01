@@ -64,6 +64,10 @@
 #include <linux/nospec.h>
 
 #include <linux/kmsg_dump.h>
+
+#include <linux/delay.h>
+#include <linux/kthread.h>
+
 /* Move somewhere else to avoid recompiling? */
 #include <generated/utsrelease.h>
 
@@ -2477,13 +2481,31 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 		error = arch_prctl_spec_ctrl_set(me, arg2, arg3);
 		break;
 	case PR_INIT_ASYNC:
-		if (arg2 || arg3 || arg4 || arg5)
+		if (arg3 || arg4 || arg5)
 			return -EINVAL;
 		printk(KERN_DEBUG "Called PR_INIT_ASYNC\n");
+#define BUF_SIZE 4096
+		char* buf = kmalloc(BUF_SIZE, GFP_KERNEL);
+		int i = 0;
+		for (i = 0; i < 10; ++ i)
+		{
+			char ch = 'a' + i;
+			memset(buf, ch, BUF_SIZE);
+			printk("[PR_INIT_ASYNC] Addr %p writing %c\n", arg2, ch);
+			if (copy_to_user((char __user *)arg2, buf, BUF_SIZE)){
+				kfree(buf);
+				return -EFAULT;
+			}
+			printk("[PR_INIT_ASYNC] Accessed.\n");
+			msleep(500);
+		}
+		kfree(buf);
+		break;
 	case PR_WAIT_ASYNC:
 		if (arg2 || arg3 || arg4 || arg5)
 			return -EINVAL;
 		printk(KERN_DEBUG "Called PR_WAIT_ASYNC\n");
+		break;
 	default:
 		error = -EINVAL;
 		break;
