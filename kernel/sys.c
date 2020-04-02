@@ -2262,6 +2262,50 @@ int __weak arch_prctl_spec_ctrl_set(struct task_struct *t, unsigned long which,
 	return -EINVAL;
 }
 
+#define BUF_SIZE 4096
+
+typedef struct {
+	int x, y;
+} queue_elem_t;
+
+#define QUEUE_LEN ((BUF_SIZE - 3 * sizeof(int)) / sizeof(queue_elem_t))
+typedef struct {
+	// Elements in [head, tail_done) are in the queue
+	// Elements in [tail_done, tail_begin) are being inserted
+	int head;
+	queue_elem_t elem[QUEUE_LEN];
+	int tail_begin, tail_done; // Make the head and tails in different cache lines
+} AsyncQueue;
+
+// Only a single consumer is supported
+// return true when success
+static bool dequeue(AsyncQueue __user *q, queue_elem_t *x)
+{
+	if (unlikely(__atomic_load_n(&q->tail_done, __ATOMIC_ACQUIRE) == q->head))
+		return false;
+	*x = q->elem[q->head];
+	__atomic_store_n(&q->head, (q->head + 1) % QUEUE_LEN, __ATOMIC_RELEASE);
+	return true;
+}
+
+static void do_init_async(AsyncQueue __user *q)
+{
+	stac(); // x86 specific
+	while (true)
+	{
+		queue_elem_t elem;
+		int cnt = 0;
+		while (unlikely(!dequeue(q, &elem)))
+		{
+			if (++cnt > 10000) // Return to user space to answer signals
+				return;
+			schedule();
+		}
+		printk(KERN_DEBUG "[PR_INIT_ASYNC] %d + %d = %d\n", elem.x, elem.y, elem.x + elem.y);
+	}
+	clac(); // x86 specific
+}
+
 SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 		unsigned long, arg4, unsigned long, arg5)
 {
@@ -2483,23 +2527,7 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 	case PR_INIT_ASYNC:
 		if (arg3 || arg4 || arg5)
 			return -EINVAL;
-		printk(KERN_DEBUG "Called PR_INIT_ASYNC\n");
-#define BUF_SIZE 4096
-		char* buf = kmalloc(BUF_SIZE, GFP_KERNEL);
-		int i = 0;
-		for (i = 0; i < 10; ++ i)
-		{
-			char ch = 'a' + i;
-			memset(buf, ch, BUF_SIZE);
-			printk("[PR_INIT_ASYNC] Addr %p writing %c\n", arg2, ch);
-			if (copy_to_user((char __user *)arg2, buf, BUF_SIZE)){
-				kfree(buf);
-				return -EFAULT;
-			}
-			printk("[PR_INIT_ASYNC] Accessed.\n");
-			msleep(500);
-		}
-		kfree(buf);
+		do_init_async((AsyncQueue __user *)arg2);
 		break;
 	case PR_WAIT_ASYNC:
 		if (arg2 || arg3 || arg4 || arg5)
