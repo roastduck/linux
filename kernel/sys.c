@@ -2264,8 +2264,11 @@ int __weak arch_prctl_spec_ctrl_set(struct task_struct *t, unsigned long which,
 
 #define BUF_SIZE 4096
 
+#define ASYNC_CMD_PREFETCH 0
+
 typedef struct {
-	int x, y;
+	int cmd;
+	void __user *addr;
 } queue_elem_t;
 
 #define QUEUE_LEN ((BUF_SIZE - 3 * sizeof(int)) / sizeof(queue_elem_t))
@@ -2301,7 +2304,24 @@ static void do_init_async(AsyncQueue __user *q)
 				return;
 			schedule();
 		}
-		printk(KERN_DEBUG "[PR_INIT_ASYNC] %d + %d = %d\n", elem.x, elem.y, elem.x + elem.y);
+		switch (elem.cmd)
+		{
+		case ASYNC_CMD_PREFETCH: {
+				unsigned long address = (unsigned long)elem.addr;
+				struct task_struct *tsk = current;
+				struct mm_struct *mm = tsk->mm;
+				unsigned int flags = FAULT_FLAG_KILLABLE | FAULT_FLAG_USER;
+				struct vm_area_struct *vma;
+				down_read(&mm->mmap_sem);
+				vma = find_vma(mm, address);
+				if (unlikely(!vma)) {
+					break;
+				}
+				handle_mm_fault(vma, address, flags);
+				up_read(&mm->mmap_sem);
+				break;
+			}
+		}
 	}
 	clac(); // x86 specific
 }
@@ -2528,11 +2548,6 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 		if (arg3 || arg4 || arg5)
 			return -EINVAL;
 		do_init_async((AsyncQueue __user *)arg2);
-		break;
-	case PR_WAIT_ASYNC:
-		if (arg2 || arg3 || arg4 || arg5)
-			return -EINVAL;
-		printk(KERN_DEBUG "Called PR_WAIT_ASYNC\n");
 		break;
 	default:
 		error = -EINVAL;
